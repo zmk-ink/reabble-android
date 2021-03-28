@@ -107,7 +107,7 @@ public class MainActivity extends AppCompatActivity {
         public void run() {
             MainActivity.this.runOnUiThread(() -> {
                 Long sysTime = System.currentTimeMillis();
-                mTextView.setText(DateFormat.format("hh:mm", sysTime));
+                mTextView.setText(DateFormat.format("HH:mm", sysTime));
             });
         }
     };
