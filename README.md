@@ -11,6 +11,12 @@ It's a third-party application of the Reabble.
 ## Download
 You can download from [Release](https://github.com/zmk-ink/reabble-android/releases) page
 
+## Features
+
+* 按音量键翻页 Press the volume key to turn pages 
+* 点击时钟刷新页面 Click on the clock to refresh
+* 单击图标以旋转页面 Rotate the page when click the icon
+
 ## Supported
 
 * 口袋阅
