@@ -5,21 +5,17 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.annotation.SuppressLint;
 import android.app.Instrumentation;
-import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.format.DateFormat;
 import android.util.DisplayMetrics;
-import android.util.Log;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.Window;
 import android.view.WindowManager;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -41,6 +37,7 @@ public class MainActivity extends AppCompatActivity {
         //设置加载前的函数
         @Override
         public void onPageStarted(WebView view, String url, Bitmap favicon) {
+//            Log.d("what", url);
             if(url.toString().contains("https://reabble.cn/app")){
                 return;
             }
@@ -67,7 +64,6 @@ public class MainActivity extends AppCompatActivity {
         inst.sendKeyDownUpSync(KeyEvent.KEYCODE_PAGE_DOWN);
         inst.sendKeySync(new KeyEvent(KeyEvent.KEYCODE_SHIFT_LEFT,KeyEvent.KEYCODE_TAB));
     };
-
     @Override
     public boolean onKeyUp(int keyCode, KeyEvent event) {
         if(keyCode==KeyEvent.KEYCODE_VOLUME_DOWN || keyCode==KeyEvent.KEYCODE_VOLUME_UP){
@@ -88,13 +84,8 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 //        this.dialogShow();
+//        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
         super.onCreate(savedInstanceState);
-        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
-        this.initConfig();
-        requestWindowFeature(Window.FEATURE_NO_TITLE);
-        if (setFlags) {
-            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
-        }
         setContentView(R.layout.activity_main);
 
         // get wh of screen
@@ -116,13 +107,7 @@ public class MainActivity extends AppCompatActivity {
         public void run() {
             MainActivity.this.runOnUiThread(() -> {
                 Long sysTime = System.currentTimeMillis();
-                mTextView.setText("≡");
-
-//                if (setFlags) {
-//                    mTextView.setText("≡");
-//                } else {
-//                    mTextView.setText(DateFormat.format("HH:mm", sysTime));
-//                }
+                mTextView.setText(DateFormat.format("HH:mm", sysTime));
             });
         }
     };
@@ -134,31 +119,20 @@ public class MainActivity extends AppCompatActivity {
         bar.setDisplayShowCustomEnabled(true);
         View v = LayoutInflater.from(getApplicationContext()).inflate(R.layout.bar, null);
         bar.setCustomView(v, new ActionBar.LayoutParams(ActionBar.LayoutParams.MATCH_PARENT, ActionBar.LayoutParams.MATCH_PARENT));
-        timer.schedule(task, 0, 1000);
+        timer.schedule(task, 0, 60000);
         mTextView = findViewById(R.id.textView2);
 
-        findViewById(R.id.textView2).setOnClickListener(view -> {
-            setFlags = !setFlags;
-            if (setFlags) {
-                getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
-                config("setflags", "1");
-            } else {
-                getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
-                config("setflags", "0");
-            }
-        });
+        findViewById(R.id.textView2).setOnClickListener(view -> webview.reload());
         findViewById(R.id.imageView).setOnClickListener(view -> {
-              webview.reload();
-
-//            //判断当前屏幕方向
-//            if (getRequestedOrientation() == ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE) {
-//                //切换竖屏
-//                MainActivity.this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
-//            } else {
-//                //切换横屏
-//                MainActivity.this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
-//            }
-//            mWebSettings.setUseWideViewPort(true);
+            //判断当前屏幕方向
+            if (getRequestedOrientation() == ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE) {
+                //切换竖屏
+                MainActivity.this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+            } else {
+                //切换横屏
+                MainActivity.this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+            }
+            mWebSettings.setUseWideViewPort(true);
         });
         ///
     }
@@ -181,12 +155,12 @@ public class MainActivity extends AppCompatActivity {
         if (screenWidth <= 720) {
             // bar.hide();
             zoomPercent = screenHeight > screenWidth ? 204 : 100; //204
-            fontSize = 13;
+            fontSize = 14;
         }
         if (screenWidth > 720) {
             webview.zoomIn();
             zoomPercent = screenHeight > screenWidth ? 275 : 150;
-            fontSize = 15;
+            fontSize = 16;
         }
         mWebSettings.setDefaultFontSize(fontSize);
         webview.setInitialScale(zoomPercent);
@@ -202,23 +176,5 @@ public class MainActivity extends AppCompatActivity {
         loadingDialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
     }
 
-    SharedPreferences sp;
-    boolean setFlags = false;
-    private void initConfig(){
-        Context ctx = MainActivity.this;
-        sp = ctx.getSharedPreferences("SP", MODE_PRIVATE);
-        if (config("setflags").equals("1")) {
-            setFlags = true;
-        }
-    }
 
-    private void config(String key, String value) {
-        SharedPreferences.Editor editor = sp.edit();
-        editor.putString(key, value);
-        editor.commit();
-    }
-
-    private String config(String key) {
-        return sp.getString(key, "").toString();
-    }
 }

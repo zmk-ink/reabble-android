@@ -3,16 +3,16 @@
     <style name="Theme.Reabble" parent="@style/Theme.AppCompat.DayNight.DarkActionBar">
         <!-- Primary brand color. -->
         <item name="colorPrimary">@color/black</item>
-        <item name="colorPrimaryVariant">@color/cardview_dark_background</item>
+        <item name="colorPrimaryVariant">@color/black</item>
         <item name="colorOnPrimary">@color/white</item>
         <!-- Secondary brand color. -->
-        <item name="colorSecondary">@color/cardview_dark_background</item>
-        <item name="colorSecondaryVariant">@color/cardview_dark_background</item>
-        <item name="colorOnSecondary">@color/cardview_dark_background</item>
+        <item name="colorSecondary">@color/black</item>
+        <item name="colorSecondaryVariant">@color/black</item>
+        <item name="colorOnSecondary">@color/black</item>
         <!-- Status bar color. -->
         <item name="android:windowNoTitle">true</item>
         <item name="android:windowActionBar">true</item>
-        <item name="android:windowFullscreen">false</item>
+        <item name="android:windowFullscreen">true</item>
         <item name="android:windowContentOverlay">@null</item>
 
         <item name="colorControlNormal">#CCCCCC</item>
@@ -20,7 +20,7 @@
         <item name="android:actionBarStyle">@style/MyActionBarStyle</item>
         <!-- Support library compatibility -->
         <item name="actionBarStyle"> @style/MyActionBarStyle</item>
-<!--        <item name="actionBarSize">50dip</item>-->
+        <item name="actionBarSize">50dp</item>
     </style>
 
     <style name="MyActionBarStyle" parent="@style/Widget.AppCompat.Light.ActionBar.Solid">
