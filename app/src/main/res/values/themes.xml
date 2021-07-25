@@ -1,6 +1,6 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
-    <style name="Theme.Reabble" parent="@style/Theme.AppCompat.DayNight.DarkActionBar">
+    <style name="Theme.Reabble" parent="@style/Theme.AppCompat.DayNight.NoActionBar">
         <!-- Primary brand color. -->
         <item name="colorPrimary">@color/black</item>
         <item name="colorPrimaryVariant">@color/black</item>
@@ -9,22 +9,6 @@
         <item name="colorSecondary">@color/black</item>
         <item name="colorSecondaryVariant">@color/black</item>
         <item name="colorOnSecondary">@color/black</item>
-        <!-- Status bar color. -->
-        <item name="android:windowNoTitle">true</item>
-        <item name="android:windowActionBar">true</item>
-        <item name="android:windowFullscreen">true</item>
-        <item name="android:windowContentOverlay">@null</item>
-
-        <item name="colorControlNormal">#CCCCCC</item>
-        <item name="colorControlActivated">#0099CC</item>
-        <item name="android:actionBarStyle">@style/MyActionBarStyle</item>
-        <!-- Support library compatibility -->
-        <item name="actionBarStyle"> @style/MyActionBarStyle</item>
-        <item name="actionBarSize">50dp</item>
     </style>
 
-    <style name="MyActionBarStyle" parent="@style/Widget.AppCompat.Light.ActionBar.Solid">
-        <!--解决左边一直有一块边距的问题 contentInsetStart = 0 -->
-        <item name="contentInsetStart">0dp</item>
-    </style>
 </resources>
