@@ -5,14 +5,11 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.annotation.SuppressLint;
 import android.app.Instrumentation;
 import android.content.Intent;
-import android.content.pm.ActivityInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.text.format.DateFormat;
 import android.util.DisplayMetrics;
 import android.view.KeyEvent;
-import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -51,24 +48,15 @@ public class MainActivity extends AppCompatActivity {
     };
     Instrumentation inst = new Instrumentation();
     Runnable runnableUp = () -> {
-        inst.sendKeyDownUpSync(KeyEvent.KEYCODE_PAGE_UP);
-        inst.sendKeySync(new KeyEvent(KeyEvent.KEYCODE_SHIFT_LEFT,KeyEvent.KEYCODE_TAB));
+        inst.sendKeyDownUpSync(KeyEvent.KEYCODE_P);
     };
     Runnable runnableDown = () -> {
-        inst.sendKeyDownUpSync(KeyEvent.KEYCODE_PAGE_DOWN);
-        inst.sendKeySync(new KeyEvent(KeyEvent.KEYCODE_SHIFT_LEFT,KeyEvent.KEYCODE_TAB));
+        inst.sendKeyDownUpSync(KeyEvent.KEYCODE_N);
     };
-    @Override
-    public boolean onKeyUp(int keyCode, KeyEvent event) {
-        if(keyCode==KeyEvent.KEYCODE_VOLUME_DOWN || keyCode==KeyEvent.KEYCODE_VOLUME_UP){
-            new Thread(keyCode==KeyEvent.KEYCODE_VOLUME_DOWN? runnableDown : runnableUp).start();
-            return true;
-        }
-        return super.onKeyUp(keyCode, event);
-    }
 
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN || keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
+            new Thread(keyCode==KeyEvent.KEYCODE_VOLUME_DOWN? runnableDown : runnableUp).start();
             return true;
         }
         return super.onKeyDown(keyCode, event);
@@ -78,7 +66,6 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-//        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         setContentView(R.layout.activity_main);
 
         // get wh of screen
@@ -88,21 +75,24 @@ public class MainActivity extends AppCompatActivity {
         screenWidth = outMetrics.widthPixels;
         screenHeight = outMetrics.heightPixels;
         ///
-        this.webView();
+        this.initWebView();
         webview.loadUrl("https://reabble.cn/app");
     }
 
     Timer timer = new Timer();
     private TextView mTextView;
 
-    private void webView () {
+    private void initWebView() {
         webview = findViewById(R.id.webview);
+        webview.requestFocus();
+
         mWebSettings = webview.getSettings();
         mWebSettings.setJavaScriptEnabled(true);
         mWebSettings.setSupportZoom(true);
         mWebSettings.setUseWideViewPort(false);
         mWebSettings.setBlockNetworkImage(false);
         mWebSettings.setLoadWithOverviewMode(true);
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             mWebSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         }
@@ -110,28 +100,35 @@ public class MainActivity extends AppCompatActivity {
 
         // set page zoom by screen wh
         int zoomPercent = 0, fontSize = 0;
-        if (screenWidth <= 720) {
-            zoomPercent = 204;
-            fontSize = 16;
-        }
-        if (screenWidth > 720) {
-            webview.zoomIn();
-            zoomPercent = 200;
-            fontSize = 17;
+        String device_model = Build.MODEL;
+
+        switch (device_model) {
+            case "SC801a":
+            case "SC801c":
+                webview.zoomIn();
+                zoomPercent = 100;
+                fontSize = 25;
+                break;
+            case "MiDuoKanReaderPro":
+                zoomPercent = 150;
+                fontSize = 25;
+                break;
+            case "Poke4S":
+                zoomPercent = 150;
+                fontSize = 16;
+                break;
+            default:
+                if (screenWidth > 720) {
+                    zoomPercent = 200;
+                    fontSize = 17;
+                } else {
+                    zoomPercent = 204;
+                    fontSize = 16;
+                }
         }
         mWebSettings.setDefaultFontSize(fontSize);
         webview.setInitialScale(zoomPercent);
         ///
-
     }
-
-    public void dialogShow() {
-        if (loadingDialog==null) {
-            loadingDialog = new LoadingDialog(this);
-        }
-        loadingDialog.show();
-        loadingDialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
-    }
-
 
 }
