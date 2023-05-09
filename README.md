@@ -4,9 +4,9 @@
 
 此为 Reabble 在 Android 上的外壳程序，意在提升 Android 类电子书的阅读体验，是 Reabble 的第三方应用。
 
-This is the Reabble's shell application on Android. 
-It's intended to enhance the reading experience of some e-book readers. 
-It's a third-party application of the Reabble.
+This is Reabble's shell application for Android, 
+intended to enhance the reading experience of certain e-book readers. 
+It is a third-party application for Reabble.
 
 ## Download
 You can download from [Release](https://github.com/zmk-ink/reabble-android/releases) page
@@ -14,6 +14,7 @@ You can download from [Release](https://github.com/zmk-ink/reabble-android/relea
 ## Features
 
 * 按音量键翻页 Press the volume key to turn pages
+* 在页面中增加刷新按钮 Add a refresh button in the page
 
 ## Supported
 
