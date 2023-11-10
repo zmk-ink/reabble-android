@@ -92,7 +92,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onPageFinished(WebView view, String url) {
             String jsRefresh = readJSFile(refresh_type == 1 ? "js/onload_pad.js" : "js/onload.js");
-            webview.loadUrl("javascript:"+ jsRefresh +"void(0);");
+            webview.evaluateJavascript (jsRefresh +"void(0);", null);
             pageLoaded = true;
             showWebView(true);
         }
