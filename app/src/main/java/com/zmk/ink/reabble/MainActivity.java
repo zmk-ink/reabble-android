@@ -20,12 +20,7 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.RelativeLayout;
 import android.view.View;
-
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
+import com.zmk.ink.reabble.utils.FileUtil;
 
 public class MainActivity extends AppCompatActivity {
     int refresh_type = 0;
@@ -79,7 +74,11 @@ public class MainActivity extends AppCompatActivity {
             if (errorCode == ERROR_HOST_LOOKUP
                     || errorCode == ERROR_CONNECT
                     || errorCode == ERROR_TIMEOUT) {
-                String customHtml = readFile("NetworkError.html");
+                String customHtml = FileUtil.readFile(
+                        getApplicationContext(),
+                        "NetworkError.html"
+                );
+
                 view.loadDataWithBaseURL(null,
                         customHtml,
                         "text/html",
@@ -91,7 +90,10 @@ public class MainActivity extends AppCompatActivity {
         //设置结束加载函数
         @Override
         public void onPageFinished(WebView view, String url) {
-            String jsRefresh = readJSFile(refresh_type == 1 ? "js/onload_pad.js" : "js/onload.js");
+            String jsRefresh = FileUtil.readJSFile(
+                    getApplicationContext(),
+                    refresh_type == 1 ? "js/onload_pad.js" : "js/onload.js"
+            );
             webview.evaluateJavascript (jsRefresh +"void(0);", null);
             pageLoaded = true;
             showWebView(true);
@@ -110,12 +112,23 @@ public class MainActivity extends AppCompatActivity {
         webview.setVisibility(View.GONE);
     }
     Instrumentation inst = new Instrumentation();
-    Runnable runnableUp = () -> inst.sendKeyDownUpSync(KeyEvent.KEYCODE_P);
-    Runnable runnableDown = () -> inst.sendKeyDownUpSync(KeyEvent.KEYCODE_N);
+    Runnable runnableUp = () -> runOnUiThread(() -> webview.evaluateJavascript("window.reabblePageUp();void(0);", null));
+    Runnable runnableDown = () -> runOnUiThread(() -> webview.evaluateJavascript("window.reabblePageDown();void(0);", null));
 
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN || keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
-            new Thread(keyCode==KeyEvent.KEYCODE_VOLUME_DOWN? runnableDown : runnableUp).start();
+            runOnUiThread(() -> {
+                switch (keyCode) {
+                    case KeyEvent.KEYCODE_VOLUME_DOWN:
+                        runnableDown.run();
+                        break;
+                    case KeyEvent.KEYCODE_VOLUME_UP:
+                        runnableUp.run();
+                        break;
+                    default:
+                        break;
+                }
+            });
             return true;
         }
         return super.onKeyDown(keyCode, event);
@@ -198,36 +211,11 @@ public class MainActivity extends AppCompatActivity {
         mWebSettings.setDefaultFontSize(fontSize);
         webview.setInitialScale(zoomPercent);
         ///
+
     }
 
-    private String readFile(String fileName) {
-        try {
-            InputStream inputStream = getAssets().open(fileName);
-            int size = inputStream.available();
-            byte[] buffer = new byte[size];
-            inputStream.read(buffer);
-            inputStream.close();
-            return new String(buffer);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return "";
-    }
 
-    private String readJSFile(String fileName) {
-        try {
-            StringBuilder stringBuilder = new StringBuilder();
-            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(getAssets().open(fileName), StandardCharsets.UTF_8));
-            String line;
-            while ((line = bufferedReader.readLine()) != null) {
-                stringBuilder.append(line);
-            }
-            bufferedReader.close();
-            return stringBuilder.toString();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return "";
-    }
+
+
 
 }
