@@ -3,7 +3,6 @@ package com.zmk.ink.reabble;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.annotation.SuppressLint;
-import android.app.Instrumentation;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.net.Uri;
@@ -111,7 +110,7 @@ public class MainActivity extends AppCompatActivity {
         loadingLayout.setVisibility(View.VISIBLE);
         webview.setVisibility(View.GONE);
     }
-    Instrumentation inst = new Instrumentation();
+
     Runnable runnableUp = () -> runOnUiThread(() -> webview.evaluateJavascript("window.reabblePageUp();void(0);", null));
     Runnable runnableDown = () -> runOnUiThread(() -> webview.evaluateJavascript("window.reabblePageDown();void(0);", null));
 
@@ -182,7 +181,6 @@ public class MainActivity extends AppCompatActivity {
         int zoomPercent, fontSize;
         String device_model = Build.MODEL;
         refresh_type = 1;
-
         switch (device_model) {
             case "SC801a":
             case "SC801c":
@@ -199,11 +197,22 @@ public class MainActivity extends AppCompatActivity {
                 zoomPercent = 150;
                 fontSize = 16;
                 break;
+            case "Tab10CPro":
+            case "Tab10":
+            case "Tab10C":
+                zoomPercent = 293;
+                fontSize = 16;
+                break;
             default:
-                if (screenWidth > 720) {
+                if (screenWidth >= 1860) {
+                    zoomPercent = 293;
+                    fontSize = 16;
+                }
+                else if (screenWidth > 720) {
                     zoomPercent = 200;
                     fontSize = 17;
-                } else {
+                }
+                else {
                     zoomPercent = 204;
                     fontSize = 16;
                 }
