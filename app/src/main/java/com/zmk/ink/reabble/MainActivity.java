@@ -14,12 +14,16 @@ import android.view.KeyEvent;
 import android.view.WindowManager;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.RelativeLayout;
 import android.view.View;
 import com.zmk.ink.reabble.utils.FileUtil;
+
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 
 public class MainActivity extends AppCompatActivity {
     int refresh_type = 0;
@@ -61,6 +65,22 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @Override
+        public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+            String url = request.getUrl().toString();
+
+            if (url.startsWith("https://www.inoreader.com/images/") ||
+                url.startsWith("https://nettools1.oxyry.com/image?url=https%3A%2F%2Fwww.inoreader.com%2Fimages")
+            ) {
+                String base64TransparentGif = "R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==";
+                byte[] transparentGif = android.util.Base64.decode(base64TransparentGif, android.util.Base64.DEFAULT);
+                InputStream data = new ByteArrayInputStream(transparentGif);
+                return new WebResourceResponse("image/gif", "base64", data);
+            }
+
+            return null;
+        }
+
+        @Override
         public void onReceivedError (WebView view,
                                      WebResourceRequest request,
                                      WebResourceError error) {
@@ -68,6 +88,7 @@ public class MainActivity extends AppCompatActivity {
             if (pageLoaded) {
                 return;
             }
+
 
             int errorCode = error.getErrorCode();
             if (errorCode == ERROR_HOST_LOOKUP
@@ -172,7 +193,7 @@ public class MainActivity extends AppCompatActivity {
         mWebSettings.setUseWideViewPort(false);
         mWebSettings.setBlockNetworkImage(false);
         mWebSettings.setLoadWithOverviewMode(true);
-        mWebSettings.setCacheMode(WebSettings.LOAD_NO_CACHE);
+        mWebSettings.setCacheMode(WebSettings. LOAD_DEFAULT);
         mWebSettings.setDomStorageEnabled(true);
 
         mWebSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
