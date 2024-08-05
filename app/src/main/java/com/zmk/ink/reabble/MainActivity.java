@@ -173,6 +173,7 @@ public class MainActivity extends AppCompatActivity {
         mWebSettings.setBlockNetworkImage(false);
         mWebSettings.setLoadWithOverviewMode(true);
         mWebSettings.setCacheMode(WebSettings.LOAD_NO_CACHE);
+        mWebSettings.setDomStorageEnabled(true);
 
         mWebSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         webview.setWebViewClient(webViewClient);
