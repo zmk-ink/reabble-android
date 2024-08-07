@@ -21,7 +21,7 @@ You can download from [Release](https://github.com/zmk-ink/reabble-android/relea
 
 * 口袋阅
 * 小米多看电纸书 Pro
-* 文石 Boox Poke 4S
+* 文石 Boox Poke 4S、Tab10C
 
 ## Link
 
