@@ -21,8 +21,9 @@ import android.webkit.WebViewClient;
 import android.widget.RelativeLayout;
 import android.view.View;
 import com.zmk.ink.reabble.utils.FileUtil;
-
+import com.zmk.ink.reabble.utils.NetUtil;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 
 public class MainActivity extends AppCompatActivity {
@@ -61,8 +62,8 @@ public class MainActivity extends AppCompatActivity {
         public void onLoadResource (WebView view,
                                     String url) {
             /**
-            Log.d("dddd2", TimingUtil.logTimeDifference() + " ms ↖");
-            Log.d("dddd",   url);
+            Log.d("dddd3", TimingUtil.logTimeDifference() + " ms ↖");
+            Log.d("dddd4",   url);
             **/
             super.onLoadResource(view, url);
         }
@@ -83,6 +84,18 @@ public class MainActivity extends AppCompatActivity {
                 return new WebResourceResponse("image/gif", "base64", data);
             }
 
+            if (NetUtil.isGifUrl(url)) {
+                String jpgFilePath = view.getContext().getCacheDir() + "/output.jpg";
+                Bitmap bitmap = NetUtil.gifToJpg(url, jpgFilePath);
+
+                if (bitmap != null) {
+                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos);
+                    InputStream inputStream = new ByteArrayInputStream(baos.toByteArray());
+                    return new WebResourceResponse("image/jpeg", "UTF-8", inputStream);
+                }
+            }
+
             return null;
         }
 
@@ -95,11 +108,11 @@ public class MainActivity extends AppCompatActivity {
                 return;
             }
 
-
             int errorCode = error.getErrorCode();
             if (errorCode == ERROR_HOST_LOOKUP
-                    || errorCode == ERROR_CONNECT
-                    || errorCode == ERROR_TIMEOUT) {
+                || errorCode == ERROR_CONNECT
+                || errorCode == ERROR_TIMEOUT
+            ) {
                 String customHtml = FileUtil.readFile(
                         getApplicationContext(),
                         "NetworkError.html"
