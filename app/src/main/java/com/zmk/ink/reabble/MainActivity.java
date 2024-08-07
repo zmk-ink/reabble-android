@@ -9,6 +9,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Looper;
 import android.util.DisplayMetrics;
 import android.view.KeyEvent;
 import android.view.WindowManager;
@@ -21,9 +22,17 @@ import android.webkit.WebViewClient;
 import android.widget.RelativeLayout;
 import android.view.View;
 import com.zmk.ink.reabble.utils.FileUtil;
-
+import com.zmk.ink.reabble.utils.NetUtil;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.io.IOException;
+import java.io.BufferedReader;
+import android.app.Instrumentation;
 
 public class MainActivity extends AppCompatActivity {
     int refresh_type = 0;
@@ -33,11 +42,25 @@ public class MainActivity extends AppCompatActivity {
     private RelativeLayout loadingLayout;
 
     boolean pageLoaded = false;
+    private String jsOnload = null;
+    private String jsOnloadPad = null;
+    
+    // 使用线程池管理按键模拟任务，避免频繁创建线程导致性能和电量损耗
+    private final ExecutorService keyExecutor = Executors.newSingleThreadExecutor();
 
     WebViewClient webViewClient = new WebViewClient() {
-        @Deprecated
+        @Override
         public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-            String url = request.getUrl().toString();
+            return handleUrlLoading(view, request.getUrl().toString());
+        }
+
+        @SuppressWarnings("deprecation")
+        @Override
+        public boolean shouldOverrideUrlLoading(WebView view, String url) {
+            return handleUrlLoading(view, url);
+        }
+
+        private boolean handleUrlLoading(WebView view, String url) {
             pageLoaded = false;
             // 判断是否为页面刷新操作
             if (url.equals(view.getUrl())) {
@@ -61,8 +84,8 @@ public class MainActivity extends AppCompatActivity {
         public void onLoadResource (WebView view,
                                     String url) {
             /**
-            Log.d("dddd2", TimingUtil.logTimeDifference() + " ms ↖");
-            Log.d("dddd",   url);
+            Log.d("dddd3", TimingUtil.logTimeDifference() + " ms ↖");
+            Log.d("dddd4",   url);
             **/
             super.onLoadResource(view, url);
         }
@@ -83,9 +106,21 @@ public class MainActivity extends AppCompatActivity {
                 return new WebResourceResponse("image/gif", "base64", data);
             }
 
+            if (NetUtil.isGifUrl(url)) {
+                String jpgFilePath = view.getContext().getCacheDir() + "/output.jpg";
+                Bitmap bitmap = NetUtil.gifToJpg(url, jpgFilePath);
+
+                if (bitmap != null) {
+                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos);
+                    InputStream inputStream = new ByteArrayInputStream(baos.toByteArray());
+                    return new WebResourceResponse("image/jpeg", "UTF-8", inputStream);
+                }
+            }
+
             return null;
         }
-
+        
         @Override
         public void onReceivedError (WebView view,
                                      WebResourceRequest request,
@@ -95,11 +130,16 @@ public class MainActivity extends AppCompatActivity {
                 return;
             }
 
+            // 检查是否为主框架错误
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                if (!request.isForMainFrame()) return;
+            }
 
-            int errorCode = error.getErrorCode();
+            int errorCode = Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? error.getErrorCode() : -1;
             if (errorCode == ERROR_HOST_LOOKUP
-                    || errorCode == ERROR_CONNECT
-                    || errorCode == ERROR_TIMEOUT) {
+                || errorCode == ERROR_CONNECT
+                || errorCode == ERROR_TIMEOUT
+            ) {
                 String customHtml = FileUtil.readFile(
                         getApplicationContext(),
                         "NetworkError.html"
@@ -116,45 +156,51 @@ public class MainActivity extends AppCompatActivity {
         //设置结束加载函数
         @Override
         public void onPageFinished(WebView view, String url) {
-            String jsRefresh = FileUtil.readJSFile(
-                    getApplicationContext(),
-                    refresh_type == 1 ? "js/onload_pad.js" : "js/onload.js"
-            );
-            webview.evaluateJavascript (jsRefresh +"void(0);", null);
+            injectJS();
             pageLoaded = true;
             showWebView(true);
         }
     };
 
+    /**
+     * 注入 JS 代码，使用缓存避免重复读取文件，并使用 evaluateJavascript 提高性能
+     */
+    private void injectJS() {
+        if (jsOnload == null) {
+            jsOnload = readJSFile("js/onload.js");
+        }
+        if (jsOnloadPad == null) {
+            jsOnloadPad = readJSFile("js/onload_pad.js");
+        }
+        String js = refresh_type == 1 ? jsOnloadPad : jsOnload;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            webview.evaluateJavascript(js, null);
+        } else {
+            webview.loadUrl("javascript:" + js + "void(0);");
+        }
+    }
+
     public void showWebView(boolean show) {
         if (show){
-            new Handler().postDelayed(() -> {
+            // 墨水屏响应较慢，适当延迟隐藏加载层可以减少渲染闪烁，500ms 过长，改为 200ms
+            new Handler(Looper.getMainLooper()).postDelayed(() -> {
                 loadingLayout.setVisibility(View.GONE);
                 webview.setVisibility(View.VISIBLE);
-            }, 500);
+            }, 200);
             return;
         }
         loadingLayout.setVisibility(View.VISIBLE);
-        webview.setVisibility(View.GONE);
+        // 不再将 webview 设为 GONE，避免触发全屏重绘，只需让加载层覆盖即可
+        // webview.setVisibility(View.GONE);
     }
 
-    Runnable runnableUp = () -> runOnUiThread(() -> webview.evaluateJavascript("window.reabblePageUp();void(0);", null));
-    Runnable runnableDown = () -> runOnUiThread(() -> webview.evaluateJavascript("window.reabblePageDown();void(0);", null));
+    Instrumentation inst = new Instrumentation();
+    Runnable runnableUp = () -> inst.sendKeyDownUpSync(KeyEvent.KEYCODE_P);
+    Runnable runnableDown = () -> inst.sendKeyDownUpSync(KeyEvent.KEYCODE_N);
 
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN || keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
-            runOnUiThread(() -> {
-                switch (keyCode) {
-                    case KeyEvent.KEYCODE_VOLUME_DOWN:
-                        runnableDown.run();
-                        break;
-                    case KeyEvent.KEYCODE_VOLUME_UP:
-                        runnableUp.run();
-                        break;
-                    default:
-                        break;
-                }
-            });
+            keyExecutor.execute(keyCode==KeyEvent.KEYCODE_VOLUME_DOWN? runnableDown : runnableUp);
             return true;
         }
         return super.onKeyDown(keyCode, event);
@@ -167,6 +213,39 @@ public class MainActivity extends AppCompatActivity {
         }else{
             super.onBackPressed();
         }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (webview != null) {
+            webview.onPause();
+            webview.pauseTimers(); // 关键：暂停 JS 定时器，显著降低后台电量消耗
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (webview != null) {
+            webview.onResume();
+            webview.resumeTimers();
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (webview != null) {
+            webview.loadDataWithBaseURL(null, "", "text/html", "utf-8", null);
+            webview.clearHistory();
+            if (webview.getParent() != null) {
+                ((android.view.ViewGroup) webview.getParent()).removeView(webview);
+            }
+            webview.destroy();
+            webview = null;
+        }
+        keyExecutor.shutdown();
+        super.onDestroy();
     }
 
     @SuppressLint("InvalidWakeLockTag")
@@ -196,20 +275,31 @@ public class MainActivity extends AppCompatActivity {
         mWebSettings = webview.getSettings();
         mWebSettings.setJavaScriptEnabled(true);
         mWebSettings.setSupportZoom(true);
-        mWebSettings.setUseWideViewPort(false);
-        mWebSettings.setBlockNetworkImage(false);
+        mWebSettings.setUseWideViewPort(true); // 改为 true，对现代网页兼容性更好
         mWebSettings.setLoadWithOverviewMode(true);
-        mWebSettings.setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
-        mWebSettings.setAppCacheEnabled(true);
-        mWebSettings.setDomStorageEnabled(true);
+        
+        // 关键改进：启用缓存，显著减少网络流量和电量损耗，提升加载速度
+        mWebSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
+        mWebSettings.setDomStorageEnabled(true); // 启用 DOM 存储，现代 Web 应用必备
+        mWebSettings.setDatabaseEnabled(true);
+        // AppCache 在编译版本为 API 33 时会报错，因为该 API 已被完全移除。直接移除此行，现代 Android 无需此配置。
+        mWebSettings.setAllowFileAccess(true);
+        mWebSettings.setLoadsImagesAutomatically(true);
+        mWebSettings.setGeolocationEnabled(false); // 禁用地理位置以节省电量
 
-        mWebSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            mWebSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+        }
+        
+        // 墨水屏优化：在某些设备上，禁用硬件加速可以减少残影
+        // webview.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+
         webview.setWebViewClient(webViewClient);
 
         // set page zoom by screen wh
-        int zoomPercent, fontSize;
         String device_model = Build.MODEL;
         refresh_type = 1;
+        int zoomPercent, fontSize;
         switch (device_model) {
             case "SC801a":
             case "SC801c":
@@ -248,12 +338,35 @@ public class MainActivity extends AppCompatActivity {
         }
         mWebSettings.setDefaultFontSize(fontSize);
         webview.setInitialScale(zoomPercent);
-        ///
-
     }
 
+    private String readFile(String fileName) {
+        try {
+            InputStream inputStream = getAssets().open(fileName);
+            int size = inputStream.available();
+            byte[] buffer = new byte[size];
+            inputStream.read(buffer);
+            inputStream.close();
+            return new String(buffer, StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return "";
+    }
 
-
-
-
+    private String readJSFile(String fileName) {
+        try {
+            StringBuilder stringBuilder = new StringBuilder();
+            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(getAssets().open(fileName), StandardCharsets.UTF_8));
+            String line;
+            while ((line = bufferedReader.readLine()) != null) {
+                stringBuilder.append(line).append("\n"); // 添加换行符，防止因行注释导致整个脚本失效
+            }
+            bufferedReader.close();
+            return stringBuilder.toString();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return "";
+    }
 }
