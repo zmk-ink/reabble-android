@@ -22,5 +22,20 @@
 
   styleSheets.addRule(".js-26-12 .js-24-z .js-5-14 .js-9-9 .js-28-15 .js-14-16 .js-29-17 .js-6-18", "border:12px;");
   document.getElementsByClassName("app-loading")[0].innerHTML="LOADING";
-  document.styleSheets[0].insertRule('center{ display: none }',0);
 })();
+
+function tryInsertRule(attempts = 0, maxAttempts = 5) {
+  if (attempts >= maxAttempts) {
+    return;
+  }
+  if (document.styleSheets.length > 0 && document.styleSheets[0].cssRules) {
+    try {
+      document.styleSheets[0].insertRule('center{ display: none }',0);
+    } catch (e) {
+      setTimeout(tryInsertRule, 2000, attempts + 1);
+    }
+  } else {
+    setTimeout(tryInsertRule, 2000, attempts + 1);
+  }
+}
+tryInsertRule();

@@ -57,10 +57,13 @@ public class MainActivity extends AppCompatActivity {
             super.onPageStarted(view, url, favicon);
             showWebView(false);
         }
-
         @Override
         public void onLoadResource (WebView view,
                                     String url) {
+            /**
+            Log.d("dddd2", TimingUtil.logTimeDifference() + " ms ↖");
+            Log.d("dddd",   url);
+            **/
             super.onLoadResource(view, url);
         }
 
@@ -69,7 +72,10 @@ public class MainActivity extends AppCompatActivity {
             String url = request.getUrl().toString();
 
             if (url.startsWith("https://www.inoreader.com/images/") ||
-                url.startsWith("https://nettools1.oxyry.com/image?url=https%3A%2F%2Fwww.inoreader.com%2Fimages")
+                url.startsWith("https://nettools1.oxyry.com/image?url=https%3A%2F%2Fwww.inoreader.com%2Fimages") ||
+                url.startsWith("https://ana.oxyry.com/api/ana") ||
+                url.startsWith("https://reabble.cn/static/img/icons/favicon.ico") ||
+                url.startsWith("https://ana.oxyry.com/script.js")
             ) {
                 String base64TransparentGif = "R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==";
                 byte[] transparentGif = android.util.Base64.decode(base64TransparentGif, android.util.Base64.DEFAULT);
@@ -193,7 +199,8 @@ public class MainActivity extends AppCompatActivity {
         mWebSettings.setUseWideViewPort(false);
         mWebSettings.setBlockNetworkImage(false);
         mWebSettings.setLoadWithOverviewMode(true);
-        mWebSettings.setCacheMode(WebSettings. LOAD_DEFAULT);
+        mWebSettings.setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
+        mWebSettings.setAppCacheEnabled(true);
         mWebSettings.setDomStorageEnabled(true);
 
         mWebSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
