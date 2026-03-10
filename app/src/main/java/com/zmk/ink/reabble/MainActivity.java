@@ -134,8 +134,7 @@ public class MainActivity extends AppCompatActivity {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 if (!request.isForMainFrame()) return;
             }
-
-            int errorCode = Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? error.getErrorCode() : -1;
+            int errorCode = error.getErrorCode();
             if (errorCode == ERROR_HOST_LOOKUP
                 || errorCode == ERROR_CONNECT
                 || errorCode == ERROR_TIMEOUT
