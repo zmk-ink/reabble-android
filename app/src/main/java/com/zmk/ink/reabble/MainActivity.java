@@ -62,11 +62,18 @@ public class MainActivity extends AppCompatActivity {
 
         private boolean handleUrlLoading(WebView view, String url) {
             pageLoaded = false;
+
+            // 若当前已无网络，则直接展示本地错误页，不再依赖缓存内容
+            if (!NetUtil.isNetworkConnected(view.getContext())) {
+                showNetworkErrorPage();
+                return true;
+            }
+
             // 判断是否为页面刷新操作
             if (url.equals(view.getUrl())) {
                 showWebView(false);
             }
-            if(url.contains("https://reabble.cn/app") || url.indexOf("file:///android_asset")==0){
+            if (url.contains("https://reabble.cn/app") || url.indexOf("file:///android_asset") == 0) {
                 return false;
             }
 
@@ -172,11 +179,7 @@ public class MainActivity extends AppCompatActivity {
             jsOnloadPad = readJSFile("js/onload_pad.js");
         }
         String js = refresh_type == 1 ? jsOnloadPad : jsOnload;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-            webview.evaluateJavascript(js, null);
-        } else {
-            webview.loadUrl("javascript:" + js + "void(0);");
-        }
+        webview.evaluateJavascript(js, null);
     }
 
     public void showWebView(boolean show) {
@@ -263,7 +266,13 @@ public class MainActivity extends AppCompatActivity {
         screenHeight = outMetrics.heightPixels;
         ///
         this.initWebView();
-        webview.loadUrl("https://reabble.cn/app");
+
+        // 首次进入时根据网络情况决定加载线上页面或本地错误页，避免一上来就白屏 + 报错
+        if (NetUtil.isNetworkConnected(this)) {
+            webview.loadUrl("https://reabble.cn/app");
+        } else {
+            showNetworkErrorPage();
+        }
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -277,7 +286,7 @@ public class MainActivity extends AppCompatActivity {
         mWebSettings.setUseWideViewPort(true); // 改为 true，对现代网页兼容性更好
         mWebSettings.setLoadWithOverviewMode(true);
         
-        // 关键改进：启用缓存，显著减少网络流量和电量损耗，提升加载速度
+        // 始终使用默认缓存策略，弱网/断网时不强制使用缓存，交由错误页处理
         mWebSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
         mWebSettings.setDomStorageEnabled(true); // 启用 DOM 存储，现代 Web 应用必备
         mWebSettings.setDatabaseEnabled(true);
@@ -367,5 +376,24 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
         return "";
+    }
+
+    /**
+     * 统一展示本地的网络错误页面，供首次进入和加载失败时复用
+     */
+    private void showNetworkErrorPage() {
+        if (webview == null) return;
+        String customHtml = FileUtil.readFile(
+                getApplicationContext(),
+                "NetworkError.html"
+        );
+
+        webview.loadDataWithBaseURL(
+                null,
+                customHtml,
+                "text/html",
+                "UTF-8",
+                null
+        );
     }
 }

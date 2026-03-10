@@ -1,14 +1,20 @@
 package com.zmk.ink.reabble.utils;
 
+import android.content.Context;
+import android.net.ConnectivityManager;
+import android.net.NetworkCapabilities;
+import android.net.NetworkInfo;
+import android.os.Build;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import java.io.FileOutputStream;
-import java.io.InputStream;
 
 public class NetUtil {
     public static Bitmap gifToJpg(String gifUrl, String jpgFilePath) {
@@ -101,6 +107,28 @@ public class NetUtil {
             if (connection != null) {
                 connection.disconnect();
             }
+        }
+    }
+
+    /**
+     * 检查当前是否有可用网络连接（Wi-Fi 或蜂窝网络）
+     */
+    public static boolean isNetworkConnected(Context context) {
+        if (context == null) return false;
+        ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        if (cm == null) return false;
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            android.net.Network network = cm.getActiveNetwork();
+            if (network == null) return false;
+            NetworkCapabilities capabilities = cm.getNetworkCapabilities(network);
+            if (capabilities == null) return false;
+            return capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+                    || capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
+                    || capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET);
+        } else {
+            NetworkInfo networkInfo = cm.getActiveNetworkInfo();
+            return networkInfo != null && networkInfo.isConnected();
         }
     }
 }
