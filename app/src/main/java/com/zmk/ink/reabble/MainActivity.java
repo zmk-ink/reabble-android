@@ -4,6 +4,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.annotation.SuppressLint;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Build;
@@ -20,6 +21,9 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.RelativeLayout;
+import android.widget.Button;
+import android.widget.ImageView;
+import android.widget.TextView;
 import android.view.View;
 import com.zmk.ink.reabble.utils.FileUtil;
 import com.zmk.ink.reabble.utils.NetUtil;
@@ -32,13 +36,26 @@ import java.io.IOException;
 import java.io.BufferedReader;
 
 public class MainActivity extends AppCompatActivity {
+    private static final String PREFS_NAME = "app_settings";
+    private static final String KEY_BASE_URL = "base_url";
+    // 需求：International -> https://reabble.com/，China Mainland -> https://reabble.cn/
+    private static final String URL_INTERNATIONAL = "https://reabble.com"; // 国际版
+    private static final String URL_MAINLAND = "https://reabble.cn";     // 国内版
+
     int refresh_type = 0;
     WebView webview;
     WebSettings mWebSettings;
     int screenWidth, screenHeight;
     private RelativeLayout loadingLayout;
+    private ImageView loadingImage;
+    private TextView loadingText;
+    private View modeSelectorLayout;
+    private Button btnInternational;
+    private Button btnMainland;
+    private String currentBaseUrl = URL_INTERNATIONAL;
 
     boolean pageLoaded = false;
+    private String jsUserMenu = null;
     private String jsOnload = null;
     private String jsOnloadPad = null;
     
@@ -57,6 +74,12 @@ public class MainActivity extends AppCompatActivity {
         private boolean handleUrlLoading(WebView view, String url) {
             pageLoaded = false;
 
+            // 自定义协议：从网页中触发地区重新选择
+            if (url != null && url.startsWith("reabble://choose-region")) {
+                resetRegionSelection();
+                return true;
+            }
+
             // 若当前已无网络，则直接展示本地错误页，不再依赖缓存内容
             if (!NetUtil.isNetworkConnected(view.getContext())) {
                 showNetworkErrorPage();
@@ -67,7 +90,8 @@ public class MainActivity extends AppCompatActivity {
             if (url.equals(view.getUrl())) {
                 showWebView(false);
             }
-            if (url.contains("https://reabble.cn/app") || url.indexOf("file:///android_asset") == 0) {
+            String appUrlPrefix = getBaseUrl() + "/app";
+            if (url.contains(appUrlPrefix) || url.indexOf("file:///android_asset") == 0) {
                 return false;
             }
 
@@ -166,12 +190,16 @@ public class MainActivity extends AppCompatActivity {
      * 注入 JS 代码，使用缓存避免重复读取文件，并使用 evaluateJavascript 提高性能
      */
     private void injectJS() {
+        if (jsUserMenu == null) {
+            jsUserMenu = readJSFile("js/user_menu.js");
+        }
         if (jsOnload == null) {
             jsOnload = readJSFile("js/onload.js");
         }
         if (jsOnloadPad == null) {
             jsOnloadPad = readJSFile("js/onload_pad.js");
         }
+        webview.evaluateJavascript(jsUserMenu, null);
         String js = refresh_type == 1 ? jsOnloadPad : jsOnload;
         webview.evaluateJavascript(js, null);
     }
@@ -260,6 +288,11 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         loadingLayout = findViewById(R.id.loadingLayout);
+        loadingImage = findViewById(R.id.loadingImage);
+        loadingText = findViewById(R.id.loadingText);
+        modeSelectorLayout = findViewById(R.id.modeSelectorLayout);
+        btnInternational = findViewById(R.id.btnInternational);
+        btnMainland = findViewById(R.id.btnMainland);
 
         // get wh of screen
         WindowManager manager = this.getWindowManager();
@@ -270,11 +303,27 @@ public class MainActivity extends AppCompatActivity {
         ///
         this.initWebView();
 
-        // 首次进入时根据网络情况决定加载线上页面或本地错误页，避免一上来就白屏 + 报错
-        if (NetUtil.isNetworkConnected(this)) {
-            webview.loadUrl("https://reabble.cn/app");
+        if (modeSelectorLayout != null && btnInternational != null && btnMainland != null) {
+            btnInternational.setOnClickListener(v -> onModeSelected(URL_INTERNATIONAL));
+            btnMainland.setOnClickListener(v -> onModeSelected(URL_MAINLAND));
+        }
+
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        String savedBaseUrl = prefs.getString(KEY_BASE_URL, null);
+
+        if (savedBaseUrl == null && modeSelectorLayout != null) {
+            // 首次进入：让用户选择地区
+            showModeSelector();
         } else {
-            showNetworkErrorPage();
+            // 已选择地区：直接使用上次选择的域名
+            if (savedBaseUrl != null) {
+                currentBaseUrl = savedBaseUrl;
+            }
+            if (NetUtil.isNetworkConnected(this)) {
+                webview.loadUrl(getBaseUrl() + "/app");
+            } else {
+                showNetworkErrorPage();
+            }
         }
     }
 
@@ -351,6 +400,49 @@ public class MainActivity extends AppCompatActivity {
         webview.setInitialScale(zoomPercent);
     }
 
+    private String getBaseUrl() {
+        if (currentBaseUrl == null) {
+            return URL_INTERNATIONAL;
+        }
+        return currentBaseUrl;
+    }
+
+    private void showModeSelector() {
+        if (modeSelectorLayout == null) return;
+        if (loadingLayout != null) loadingLayout.setVisibility(View.VISIBLE);
+        modeSelectorLayout.setVisibility(View.VISIBLE);
+        if (loadingImage != null) loadingImage.setVisibility(View.GONE);
+        if (loadingText != null) loadingText.setVisibility(View.GONE);
+        if (webview != null) webview.setVisibility(View.GONE);
+    }
+
+    private void onModeSelected(String baseUrl) {
+        currentBaseUrl = baseUrl;
+
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        prefs.edit().putString(KEY_BASE_URL, baseUrl).apply();
+
+        if (modeSelectorLayout != null) {
+            modeSelectorLayout.setVisibility(View.GONE);
+        }
+        if (loadingImage != null) loadingImage.setVisibility(View.VISIBLE);
+        if (loadingText != null) loadingText.setVisibility(View.VISIBLE);
+
+        if (NetUtil.isNetworkConnected(this)) {
+            webview.loadUrl(baseUrl + "/app");
+        } else {
+            showNetworkErrorPage();
+        }
+    }
+
+    private void resetRegionSelection() {
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        prefs.edit().remove(KEY_BASE_URL).apply();
+        currentBaseUrl = null;
+
+        showModeSelector();
+    }
+
     private String readFile(String fileName) {
         try {
             InputStream inputStream = getAssets().open(fileName);
@@ -392,7 +484,7 @@ public class MainActivity extends AppCompatActivity {
         );
 
         webview.loadDataWithBaseURL(
-                null,
+                getBaseUrl() + "/",
                 customHtml,
                 "text/html",
                 "UTF-8",

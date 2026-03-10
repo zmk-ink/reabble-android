@@ -52,6 +52,68 @@
             android:textColor="#000000"
             android:textSize="12sp" />
 
+        <LinearLayout
+            android:id="@+id/modeSelectorLayout"
+            android:layout_width="280dp"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:layout_centerInParent="true"
+            android:visibility="gone"
+            android:background="@drawable/bg_mode_panel">
+
+            <ImageView
+                android:id="@+id/modeLogo"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginBottom="12dp"
+                android:src="@mipmap/icon"
+                android:scaleType="fitCenter" />
+
+            <TextView
+                android:id="@+id/modeTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Reabble"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="#222222"
+                android:layout_marginBottom="4dp" />
+
+            <TextView
+                android:id="@+id/modeSubtitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Choose region to continue"
+                android:textSize="12sp"
+                android:textColor="#777777"
+                android:layout_marginBottom="20dp" />
+
+            <Button
+                android:id="@+id/btnInternational"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:text="International"
+                android:textAllCaps="false"
+                android:layout_marginBottom="12dp"
+                android:background="@drawable/btn_mode"
+                android:textColor="#000000"
+                android:elevation="0dp"
+                android:stateListAnimator="@null" />
+
+            <Button
+                android:id="@+id/btnMainland"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:text="China Mainland"
+                android:textAllCaps="false"
+                android:background="@drawable/btn_mode"
+                android:textColor="#000000"
+                android:elevation="0dp"
+                android:stateListAnimator="@null" />
+
+        </LinearLayout>
+
     </RelativeLayout>
 
 

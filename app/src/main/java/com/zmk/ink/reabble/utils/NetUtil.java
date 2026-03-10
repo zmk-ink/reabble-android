@@ -68,7 +68,7 @@ public class NetUtil {
     }
 
     public static boolean isGifUrl(String urlString) {
-        if (urlString.startsWith("https://reabble.cn")) {
+        if (urlString != null && (urlString.startsWith("https://reabble.cn") || urlString.startsWith("https://reabble.com"))) {
             return false;
         }
         if (urlString == null || urlString.isEmpty()) {
