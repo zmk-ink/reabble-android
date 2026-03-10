@@ -28,11 +28,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.io.IOException;
 import java.io.BufferedReader;
-import android.app.Instrumentation;
 
 public class MainActivity extends AppCompatActivity {
     int refresh_type = 0;
@@ -45,9 +42,6 @@ public class MainActivity extends AppCompatActivity {
     private String jsOnload = null;
     private String jsOnloadPad = null;
     
-    // 使用线程池管理按键模拟任务，避免频繁创建线程导致性能和电量损耗
-    private final ExecutorService keyExecutor = Executors.newSingleThreadExecutor();
-
     WebViewClient webViewClient = new WebViewClient() {
         @Override
         public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
@@ -196,13 +190,23 @@ public class MainActivity extends AppCompatActivity {
         // webview.setVisibility(View.GONE);
     }
 
-    Instrumentation inst = new Instrumentation();
-    Runnable runnableUp = () -> inst.sendKeyDownUpSync(KeyEvent.KEYCODE_P);
-    Runnable runnableDown = () -> inst.sendKeyDownUpSync(KeyEvent.KEYCODE_N);
+    Runnable runnableUp = () -> runOnUiThread(() -> webview.evaluateJavascript("window.reabblePageUp();void(0);", null));
+    Runnable runnableDown = () -> runOnUiThread(() -> webview.evaluateJavascript("window.reabblePageDown();void(0);", null));
 
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN || keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
-            keyExecutor.execute(keyCode==KeyEvent.KEYCODE_VOLUME_DOWN? runnableDown : runnableUp);
+            runOnUiThread(() -> {
+                switch (keyCode) {
+                    case KeyEvent.KEYCODE_VOLUME_DOWN:
+                        runnableDown.run();
+                        break;
+                    case KeyEvent.KEYCODE_VOLUME_UP:
+                        runnableUp.run();
+                        break;
+                    default:
+                        break;
+                }
+            });
             return true;
         }
         return super.onKeyDown(keyCode, event);
@@ -246,7 +250,6 @@ public class MainActivity extends AppCompatActivity {
             webview.destroy();
             webview = null;
         }
-        keyExecutor.shutdown();
         super.onDestroy();
     }
 
