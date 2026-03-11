@@ -42,7 +42,6 @@ public class MainActivity extends AppCompatActivity {
     private static final String URL_INTERNATIONAL = "https://reabble.com"; // 国际版
     private static final String URL_MAINLAND = "https://reabble.cn";     // 国内版
 
-    int refresh_type = 0;
     WebView webview;
     WebSettings mWebSettings;
     int screenWidth, screenHeight;
@@ -57,7 +56,6 @@ public class MainActivity extends AppCompatActivity {
     boolean pageLoaded = false;
     private String jsUserMenu = null;
     private String jsOnload = null;
-    private String jsOnloadPad = null;
     
     WebViewClient webViewClient = new WebViewClient() {
         @Override
@@ -196,12 +194,8 @@ public class MainActivity extends AppCompatActivity {
         if (jsOnload == null) {
             jsOnload = readJSFile("js/onload.js");
         }
-        if (jsOnloadPad == null) {
-            jsOnloadPad = readJSFile("js/onload_pad.js");
-        }
         webview.evaluateJavascript(jsUserMenu, null);
-        String js = refresh_type == 1 ? jsOnloadPad : jsOnload;
-        webview.evaluateJavascript(js, null);
+        webview.evaluateJavascript(jsOnload, null);
     }
 
     public void showWebView(boolean show) {
@@ -358,7 +352,6 @@ public class MainActivity extends AppCompatActivity {
 
         // set page zoom by screen wh
         String device_model = Build.MODEL;
-        refresh_type = 1;
         int zoomPercent, fontSize;
         switch (device_model) {
             case "SC801a":
