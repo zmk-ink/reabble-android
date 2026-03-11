@@ -23,9 +23,8 @@
   styleSheets.addRule(".js-26-12 .js-24-z .js-5-14 .js-9-9 .js-28-15 .js-14-16 .js-29-17 .js-6-18", "border:12px;");
   document.getElementsByClassName("app-loading")[0].innerHTML="LOADING";
   var menuItems = [
-    { key: "region", label: "Region...", url: "reabble://choose-region" }
-    // 以后新增菜单时，继续在这里追加：
-    // { key: "about", label: "About...", url: "reabble://about" }
+    { key: "region", label: "Region...", url: "reabble://choose-region" },
+    { key: "stats", label: "阅读统计...", url: "reabble://reading-stats" }
   ];
   if (window.ReabbleUserMenu) {
     window.ReabbleUserMenu.setItems(menuItems);

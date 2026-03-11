@@ -16,6 +16,7 @@ You can download from [Release](https://github.com/zmk-ink/reabble-android/relea
 * 按音量键翻页 Press the volume key to turn pages
 * 在页面中增加刷新按钮 Add a refresh button in the page
 * 按下返回键可退出文章页面 Pressing the e-reader back button can exits the article page
+* 阅读统计功能，记录每日使用时长 Reading statistics to track daily usage time
 
 ## Supported
 

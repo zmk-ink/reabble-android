@@ -3,7 +3,10 @@ package com.zmk.ink.reabble;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.annotation.SuppressLint;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.net.Uri;
@@ -11,6 +14,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.PowerManager;
 import android.util.DisplayMetrics;
 import android.view.KeyEvent;
 import android.view.WindowManager;
@@ -27,6 +31,7 @@ import android.widget.TextView;
 import android.view.View;
 import com.zmk.ink.reabble.utils.FileUtil;
 import com.zmk.ink.reabble.utils.NetUtil;
+import com.zmk.ink.reabble.utils.UsageStatsManager;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
@@ -56,6 +61,10 @@ public class MainActivity extends AppCompatActivity {
     boolean pageLoaded = false;
     private String jsUserMenu = null;
     private String jsOnload = null;
+
+    private UsageStatsManager usageStatsManager;
+    private boolean isScreenOn = true;
+    private BroadcastReceiver screenReceiver;
     
     WebViewClient webViewClient = new WebViewClient() {
         @Override
@@ -75,6 +84,12 @@ public class MainActivity extends AppCompatActivity {
             // 自定义协议：从网页中触发地区重新选择
             if (url != null && url.startsWith("reabble://choose-region")) {
                 resetRegionSelection();
+                return true;
+            }
+
+            // 自定义协议：打开阅读统计页面
+            if (url != null && url.startsWith("reabble://reading-stats")) {
+                showReadingStatsPage();
                 return true;
             }
 
@@ -248,8 +263,9 @@ public class MainActivity extends AppCompatActivity {
         super.onPause();
         if (webview != null) {
             webview.onPause();
-            webview.pauseTimers(); // 关键：暂停 JS 定时器，显著降低后台电量消耗
+            webview.pauseTimers();
         }
+        stopUsageTracking();
     }
 
     @Override
@@ -259,10 +275,14 @@ public class MainActivity extends AppCompatActivity {
             webview.onResume();
             webview.resumeTimers();
         }
+        startUsageTrackingIfScreenOn();
     }
 
     @Override
     protected void onDestroy() {
+        stopUsageTracking();
+        unregisterScreenReceiver();
+
         if (webview != null) {
             webview.loadDataWithBaseURL(null, "", "text/html", "utf-8", null);
             webview.clearHistory();
@@ -294,7 +314,10 @@ public class MainActivity extends AppCompatActivity {
         manager.getDefaultDisplay().getMetrics(outMetrics);
         screenWidth = outMetrics.widthPixels;
         screenHeight = outMetrics.heightPixels;
-        ///
+
+        initUsageStatsManager();
+        registerScreenReceiver();
+
         this.initWebView();
 
         if (modeSelectorLayout != null && btnInternational != null && btnMainland != null) {
@@ -483,5 +506,71 @@ public class MainActivity extends AppCompatActivity {
                 "UTF-8",
                 null
         );
+    }
+
+    private void initUsageStatsManager() {
+        usageStatsManager = new UsageStatsManager(this);
+    }
+
+    @SuppressLint("UnspecifiedRegisterReceiverFlag")
+    private void registerScreenReceiver() {
+        PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+        isScreenOn = pm.isInteractive();
+
+        screenReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                String action = intent.getAction();
+                if (Intent.ACTION_SCREEN_OFF.equals(action)) {
+                    isScreenOn = false;
+                    stopUsageTracking();
+                } else if (Intent.ACTION_SCREEN_ON.equals(action)) {
+                    isScreenOn = true;
+                    startUsageTrackingIfScreenOn();
+                }
+            }
+        };
+
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(Intent.ACTION_SCREEN_ON);
+        filter.addAction(Intent.ACTION_SCREEN_OFF);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(screenReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
+        } else {
+            registerReceiver(screenReceiver, filter);
+        }
+    }
+
+    private void unregisterScreenReceiver() {
+        if (screenReceiver != null) {
+            try {
+                unregisterReceiver(screenReceiver);
+            } catch (IllegalArgumentException e) {
+                // Receiver not registered
+            }
+            screenReceiver = null;
+        }
+    }
+
+    private void startUsageTrackingIfScreenOn() {
+        if (usageStatsManager != null && isScreenOn) {
+            usageStatsManager.startTracking();
+        }
+    }
+
+    private void stopUsageTracking() {
+        if (usageStatsManager != null) {
+            usageStatsManager.stopTracking();
+        }
+    }
+
+    private void showReadingStatsPage() {
+        StatsDialogFragment dialog = StatsDialogFragment.newInstance();
+        dialog.show(getSupportFragmentManager(), "stats_dialog");
+    }
+
+    public UsageStatsManager getUsageStatsManager() {
+        return usageStatsManager;
     }
 }
