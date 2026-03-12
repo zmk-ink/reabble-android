@@ -123,8 +123,8 @@
             <div class="stat-label">30天（分钟）</div>
         </div>
         <div class="stat-item">
-            <div class="stat-value" id="avgTime">--</div>
-            <div class="stat-label">日均（分钟）</div>
+            <div class="stat-value" id="todayTime">--</div>
+            <div class="stat-label">今日（分钟）</div>
         </div>
         <div class="stat-item">
             <div class="stat-value" id="maxTime">--</div>
@@ -245,21 +245,34 @@
                 }
             }
 
-            var avgMinutes = data.length > 0 ? Math.round(totalMinutes / data.length) : 0;
             var allTimeAvgMinutes = totalDays > 0 ? Math.round(allTimeMinutes / totalDays) : 0;
+
+            var todayMinutes = 0;
+            if (data.length > 0) {
+                var today = new Date();
+                var todayStr = today.getFullYear() + '-' + 
+                    String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+                    String(today.getDate()).padStart(2, '0');
+                for (var i = 0; i < data.length; i++) {
+                    if (data[i].date === todayStr) {
+                        todayMinutes = data[i].minutes;
+                        break;
+                    }
+                }
+            }
 
             document.getElementById('chartFooter').textContent = '日均阅读' + allTimeAvgMinutes + '分钟';
 
             var totalTimeEl = document.getElementById('totalTime');
-            var avgTimeEl = document.getElementById('avgTime');
+            var todayTimeEl = document.getElementById('todayTime');
             var maxTimeEl = document.getElementById('maxTime');
             
             totalTimeEl.textContent = formatNumber(totalMinutes);
-            avgTimeEl.textContent = formatNumber(avgMinutes);
+            todayTimeEl.textContent = formatNumber(todayMinutes);
             maxTimeEl.textContent = formatHourMin(maxMinutes);
             
             autoSizeText(totalTimeEl, [4, 5, 6], ['small', 'smaller', 'smallest']);
-            autoSizeText(avgTimeEl, [4, 5, 6], ['small', 'smaller', 'smallest']);
+            autoSizeText(todayTimeEl, [4, 5, 6], ['small', 'smaller', 'smallest']);
             autoSizeText(maxTimeEl, [4, 6, 8], ['small', 'smaller', 'smallest']);
 
             var ctx = document.getElementById('statsChart').getContext('2d');
