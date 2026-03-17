@@ -27,6 +27,7 @@ import java.util.Map;
 public class UsageStatsManager {
     private static final String STATS_FILE_NAME = "usage_stats.json";
     private static final long SAVE_INTERVAL_MS = 60 * 1000; // 每分钟保存一次
+    private static final long IDLE_TIMEOUT_MS = 5 * 60 * 1000; // 超过 5 分钟无操作则视为不再阅读
 
     private final Context context;
     private final Handler handler;
@@ -36,13 +37,19 @@ public class UsageStatsManager {
     private long sessionStartTime = 0;
     private String sessionStartDate = null;
     private Map<String, Integer> pendingMinutes = new HashMap<>();
+    private long lastInteractionTime = 0;
 
     private final Runnable periodicSaveRunnable = new Runnable() {
         @Override
         public void run() {
-            if (isTracking) {
-                checkDayChangeAndSave();
-                handler.postDelayed(this, SAVE_INTERVAL_MS);
+            // 使用与其它方法相同的锁来访问 isTracking，避免潜在竞态
+            synchronized (UsageStatsManager.this) {
+                if (isTracking) {
+                    checkIdleAndSave();
+                    if (isTracking) {
+                        handler.postDelayed(this, SAVE_INTERVAL_MS);
+                    }
+                }
             }
         }
     };
@@ -53,6 +60,17 @@ public class UsageStatsManager {
         this.dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
     }
 
+    /**
+     * 由外部在发生用户交互（触摸、按键等）时调用，用于刷新“最后活跃时间”。
+     * 这样可以在长时间无交互时精确截断阅读时长。
+     */
+    public synchronized void onUserInteraction() {
+        if (!isTracking) {
+            return;
+        }
+        lastInteractionTime = System.currentTimeMillis();
+    }
+
     public synchronized void startTracking() {
         if (isTracking) {
             return;
@@ -61,6 +79,7 @@ public class UsageStatsManager {
         sessionStartTime = System.currentTimeMillis();
         sessionStartDate = dateFormat.format(new Date(sessionStartTime));
         pendingMinutes.clear();
+        lastInteractionTime = sessionStartTime;
 
         handler.postDelayed(periodicSaveRunnable, SAVE_INTERVAL_MS);
     }
@@ -79,26 +98,62 @@ public class UsageStatsManager {
         sessionStartTime = 0;
         sessionStartDate = null;
         pendingMinutes.clear();
+        lastInteractionTime = 0;
     }
 
-    private void checkDayChangeAndSave() {
+    /**
+     * 周期性检查是否长时间无用户操作。
+     *
+     * - 若超过 IDLE_TIMEOUT_MS，则认为用户已停止阅读，只累计到“推断的最后活跃时间”并结束会话：
+     *   - 若最近有交互，则以 lastInteractionTime 为准；
+     *   - 若期间完全无交互，则以 (now - IDLE_TIMEOUT_MS) 近似为“最后活跃时间”，
+     *     避免整段会话都被判定为 0 分钟。
+     * - 若未超时，则将 sessionStartTime→now 之间的时长全部累加，这一段被视为仍在活跃窗口内。
+     *
+     * 与 onUserInteraction/startTracking/stopTracking 一样加 synchronized，
+     * 保证对状态字段的访问在同一锁下，避免未来多线程演进时出现竞态。
+     */
+    private synchronized void checkIdleAndSave() {
         long now = System.currentTimeMillis();
-        String currentDate = dateFormat.format(new Date(now));
 
-        if (sessionStartDate != null && !sessionStartDate.equals(currentDate)) {
-            long midnightTime = getMidnightTime(now);
-            accumulateTime(sessionStartTime, midnightTime);
-            savePendingMinutes();
-            pendingMinutes.clear();
-
-            sessionStartTime = midnightTime;
-            sessionStartDate = currentDate;
-        } else {
-            accumulateTime(sessionStartTime, now);
-            savePendingMinutes();
-            pendingMinutes.clear();
-            sessionStartTime = now;
+        if (sessionStartTime == 0) {
+            return;
         }
+
+        long idleDuration = (lastInteractionTime == 0)
+                ? 0
+                : now - lastInteractionTime;
+        if (idleDuration >= IDLE_TIMEOUT_MS) {
+            // 超过 5 分钟无操作：本次会话只统计到“最后活跃时间”为止，
+            // 空闲这段时间（含 5 分钟）不计入阅读时长。
+            long lastActiveTime;
+            if (lastInteractionTime == 0) {
+                // 整个会话从未记录过交互：推断“最后活跃时间”为空闲窗口开始前
+                lastActiveTime = now - IDLE_TIMEOUT_MS;
+            } else {
+                // 以真实的最后一次交互时间为准
+                lastActiveTime = lastInteractionTime;
+            }
+
+            if (lastActiveTime > sessionStartTime) {
+                accumulateTime(sessionStartTime, lastActiveTime);
+            }
+            savePendingMinutes();
+            pendingMinutes.clear();
+
+            isTracking = false;
+            sessionStartTime = 0;
+            sessionStartDate = null;
+            lastInteractionTime = 0;
+            return;
+        }
+
+        // 仍在活跃窗口内：将 sessionStartTime→now 之间的时间视为有效阅读时长。
+        accumulateTime(sessionStartTime, now);
+        savePendingMinutes();
+        pendingMinutes.clear();
+        sessionStartTime = now;
+        sessionStartDate = dateFormat.format(new Date(now));
     }
 
     private void accumulateTime(long startTime, long endTime) {

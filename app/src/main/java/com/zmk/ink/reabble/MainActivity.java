@@ -250,6 +250,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    public void onUserInteraction() {
+        super.onUserInteraction();
+        if (usageStatsManager != null) {
+            usageStatsManager.onUserInteraction();
+        }
+    }
+
+    @Override
     public void onBackPressed() {
         if (webview.canGoBack()) {
             webview.goBack();
