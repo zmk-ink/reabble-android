@@ -15,12 +15,25 @@
     clearInterval(intervalId);
   }, 10000);
 
-  const styleSheets = document.styleSheets[document.styleSheets.length - 1];
-  styleSheets.addRule(".js-49-3e", "border:none;");
-  styleSheets.addRule(".js-29-44", "border-left-style: none;border-bottom:1px dashed #000000;");
-  styleSheets.addRule(".js-68-3z", "border-left-style: none;border-bottom:1px dashed #000000;");
+  // 勿使用 document.styleSheets[n].addRule：末张表常为外链或受安全策略限制，在部分 Pad WebView
+  // 上会抛错并中断整段脚本，导致虚线样式与用户菜单均未生效。改为自建可写 <style>。
+  (function injectReabbleOverrides() {
+    var id = "reabble-onload-overrides";
+    var el = document.getElementById(id);
+    if (!el) {
+      el = document.createElement("style");
+      el.id = id;
+      el.type = "text/css";
+      (document.head || document.body || document.documentElement).appendChild(el);
+    }
+    el.textContent =
+      ".js-49-3e{border:none;}" +
+      ".js-29-44{border-left-style:none;border-bottom:1px dashed #000000;}" +
+      ".js-68-3z{border-left-style:none;border-bottom:1px dashed #000000;}" +
+      ".js-26-12 .js-24-z .js-5-14 .js-9-9 .js-28-15 .js-14-16 .js-29-17 .js-6-18{border:12px;}" +
+      "center{display:none;}";
+  })();
 
-  styleSheets.addRule(".js-26-12 .js-24-z .js-5-14 .js-9-9 .js-28-15 .js-14-16 .js-29-17 .js-6-18", "border:12px;");
   document.getElementsByClassName("app-loading")[0].innerHTML="LOADING";
   var menuItems = [
     { key: "region", label: "Region…", url: "reabble://choose-region" },
@@ -31,19 +44,3 @@
     // 也可以按需追加：window.ReabbleUserMenu.addItem({ key: "about", label: "About…", url: "reabble://about" });
   }
 })();
-
-function tryInsertRule(attempts = 0, maxAttempts = 5) {
-  if (attempts >= maxAttempts) {
-    return;
-  }
-  if (document.styleSheets.length > 0 && document.styleSheets[0].cssRules) {
-    try {
-      document.styleSheets[0].insertRule('center{ display: none }',0);
-    } catch (e) {
-      setTimeout(tryInsertRule, 2000, attempts + 1);
-    }
-  } else {
-    setTimeout(tryInsertRule, 2000, attempts + 1);
-  }
-}
-tryInsertRule();

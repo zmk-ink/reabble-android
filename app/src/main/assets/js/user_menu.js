@@ -29,12 +29,16 @@
     return normalized;
   }
 
+  var SIGN_OUT_LABELS = ["Sign out", "登出", "Log out", "Logout", "退出登录"];
+
   function findSignOutItem(root) {
     var allDivs = root.getElementsByTagName("div");
     for (var i = 0; i < allDivs.length; i++) {
       var txt = getNodeText(allDivs[i]);
-      if (txt === "Sign out" || txt === "登出") {
-        return allDivs[i];
+      for (var s = 0; s < SIGN_OUT_LABELS.length; s++) {
+        if (txt === SIGN_OUT_LABELS[s]) {
+          return allDivs[i];
+        }
       }
     }
     return null;
@@ -54,12 +58,16 @@
     }
   }
 
+  function isLegacyRegionMenuLabel(txt) {
+    return txt === "Region..." || txt === "Region…";
+  }
+
   function removeLegacyRegionDuplicates(menuContainer) {
     var children = Array.prototype.slice.call(menuContainer.children);
     var foundRegion = false;
     for (var i = 0; i < children.length; i++) {
       var txt = getNodeText(children[i]);
-      if (txt !== "Region...") continue;
+      if (!isLegacyRegionMenuLabel(txt)) continue;
       if (!foundRegion) {
         foundRegion = true;
       } else {
